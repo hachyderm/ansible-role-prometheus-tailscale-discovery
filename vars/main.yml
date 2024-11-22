@@ -1,0 +1,9 @@
+---
+tailscale_write_status_cache_interval: 5min # How often to write the status cache to disk, in systemd timer format
+tailscale_write_status_cache_random_splay_seconds: 15 # Random splay to add to the status cache write interval, in seconds
+
+prometheus_tailscale_directory_config_path: /etc/prometheus-tailscale-discovery
+
+gomplate_version: 4.2.0
+gomplate_binary_url: https://github.com/hairyhenderson/gomplate/releases/download/v{{ gomplate_version }}/gomplate_linux-{{ system_processor_architecture }}
+gomplate_binary_sha256: e095900ac880889cb9a56777448083048e4517a50d08b3db96f80c43db65710c

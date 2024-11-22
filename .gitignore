@@ -1,0 +1,8 @@
+.idea
+.vscode
+.cache
+.*vault-pass
+.dccache
+.DS_Store
+
+files/sample/*

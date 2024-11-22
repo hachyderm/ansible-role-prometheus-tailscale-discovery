@@ -1,0 +1,12 @@
+
+[Unit]
+After=tailscale-write-status-cache.service
+BindsTo=tailscale-write-status-cache.service
+
+[Install]
+WantedBy=tailscale-write-status-cache.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/etc/prometheus
+ExecStart=/usr/local/bin/prometheus-write-scrape-config-from-tailscale

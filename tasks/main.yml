@@ -1,0 +1,69 @@
+
+
+# Assumptions: prometheus and promtool are already installed and available on $PATH
+
+
+- name: Download latest gomplate binary
+  get_url:
+    url: "{{ gomplate_binary_url }}"
+    dest: /usr/local/bin/gomplate
+    mode: 0755
+    checksum: "sha256:{{ gomplate_binary_sha256 }}"
+
+- name: Ensure working directory
+  file:
+    path: "{{ prometheus_tailscale_directory_config_path }}"
+    state: directory
+
+- name: Install helper scripts
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /usr/local/bin/
+    mode: 0755
+  with_items:
+    - files/usr/local/bin/prometheus-write-scrape-config-from-tailscale
+    - files/usr/local/bin/tailscale-write-status-cache
+
+- name: Install templates to config dir
+  copy:
+    src: etc/prometheus-tailscale-discovery/prometheus.yml.tpl
+    dest: "{{ prometheus_tailscale_directory_config_path }}"
+    mode: 0644
+
+- name: Install service
+  template:
+    src: etc/systemd/system/tailscale-write-status-cache.service
+    dest: /etc/systemd/system/
+    mode: 0644
+
+- name: Install timer
+  template:
+    src: etc/systemd/system/tailscale-write-status-cache.timer
+    dest: /etc/systemd/system/
+    mode: 0644
+
+- name: Install prom scrape config writer service
+  template:
+    src: etc/systemd/system/prometheus-write-scrape-config-from-tailscale.service
+    dest: /etc/systemd/system/
+    mode: 0644
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Enable the cache and prom config writers
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: yes
+  with_items:
+    - prometheus-write-scrape-config-from-tailscale.service
+    - tailscale-write-status-cache.service
+
+- name: Start the timer
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  with_items:
+    - tailscale-write-status-cache.timer  # KICK IT!

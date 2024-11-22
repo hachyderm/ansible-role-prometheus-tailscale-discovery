@@ -1,0 +1,7 @@
+[Unit]
+Description=Write a dump of `tailscale status --json` to a /var/cache/tailscale/status.json
+
+[Service]
+Type=oneshot
+WorkingDirectory={{ prometheus_tailscale_directory_config_path }}
+ExecStart=/usr/local/bin/tailscale-write-status-cache

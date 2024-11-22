@@ -1,0 +1,11 @@
+[Unit]
+Description=Write a dump of `tailscale status` to a file every 5 minutes
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec={{ tailscale_write_status_cache_interval }}
+RandomizedDelaySec={{ tailscale_write_status_cache_random_splay_seconds }}
+Unit=tailscale-write-status-cache.service
+
+[Install]
+WantedBy=timers.target

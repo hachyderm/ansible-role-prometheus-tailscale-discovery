@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+TAILSCALE_STATUS_CACHE=/var/cache/tailscale/status.json
+PROMETHEUS_CONFIG_TEMPLATE=/etc/prometheus-tailscale-discovery/prometheus.yml.tpl
+PROMETHEUS_RENDERED_CONFIG=/etc/prometheus/prometheus.rendered.yml
+PROMETHEUS_CONFIG=/etc/prometheus/prometheus.yml
+PROMETHEUS_CONFIG_BACKUP=/etc/prometheus/prometheus.yml.bak
+
+# if template doesn't exist, bail
+if [[ ! -f "${PROMETHEUS_CONFIG_TEMPLATE}" ]]; then
+    echo "ERROR - Prometheus config template does not exist at ${PROMETHEUS_CONFIG_TEMPLATE}. Exiting."
+    exit 1
+fi
+
+if [[ ! -f "$TAILSCALE_STATUS_CACHE" ]]; then
+    echo "ERROR - Tailscale status cache does not exist at ${TAILSCALE_STATUS_CACHE}. Exiting."
+    exit 1
+fi
+
+gomplate -f ${PROMETHEUS_CONFIG_TEMPLATE} -d tailscale=${TAILSCALE_STATUS_CACHE} > ${PROMETHEUS_RENDERED_CONFIG}
+
+sha256() {
+    sha256sum "$1" | awk '{print $1}'
+}
+
+if [[ -f "${PROMETHEUS_CONFIG}" ]]; then
+    starting_hash="$(sha256 "${PROMETHEUS_CONFIG}")"
+else
+    starting_hash="<does not exist>"
+fi
+
+echo "Starting Prometheus config sync from Tailscale"
+echo "Original ${PROMETHEUS_CONFIG} file hash: ${starting_hash}"
+
+ending_hash="$(sha256 "${PROMETHEUS_RENDERED_CONFIG}")"
+
+if [[ "${starting_hash}" == "${ending_hash}" ]]; then
+    echo "No update"
+else
+    echo "Config needs update. New file hash: ${ending_hash}"
+
+    echo "Backing up config to ${PROMETHEUS_CONFIG_BACKUP}"
+    cp ${PROMETHEUS_CONFIG} ${PROMETHEUS_CONFIG_BACKUP}
+
+    # TODO here we could run promtool to validate the config before copying it
+
+    echo "Copying rendered config to ${PROMETHEUS_CONFIG}"
+    cp ${PROMETHEUS_RENDERED_CONFIG} ${PROMETHEUS_CONFIG}
+
+    echo "Sending SIGHUP to Prometheus to reload config"
+    killall -HUP prometheus
+fi
